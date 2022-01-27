@@ -23,9 +23,13 @@ module does and how it does it.
 
 ### Description
 
-Description of module
+This module will create an IBM Cloud VSI that connects to the ZeroTier service to provide access to a VPC and resources within it. The VSI is based on Linux and will be configured with IP tables rules to allow forwarding (via nat-masquerade) to IBM Cloud control plane networks in the `166.8.0.0/14` network.
 
-**Note:** This module follows the Terraform conventions regarding how provider configuration is defined within the Terraform template and passed into the module - https://www.terraform.io/docs/language/modules/develop/providers.html. The default provider configuration flows through to the module. If different configuration is required for a module, it can be explicitly passed in the `providers` block of the module - https://www.terraform.io/docs/language/modules/develop/providers.html#passing-providers-explicitly.
+The module also installs a Squid proxy to support outbound http/https access from resources within the VPC that are deployed on subnets without a public gateway.
+
+This module provides service in the style of [Network functions virtualization](https://en.wikipedia.org/wiki/Network_function_virtualization) for the VPC and requires an update to the VPC routing table to set the next hop for any traffic in the ZeroTier network to the VSI's private IP address
+
+**Note:** This module follows the Terraform conventions regarding how provider configuration is defined within the Terraform template and passed into the module - <https://www.terraform.io/docs/language/modules/develop/providers.html>. The default provider configuration flows through to the module. If different configuration is required for a module, it can be explicitly passed in the `providers` block of the module - <https://www.terraform.io/docs/language/modules/develop/providers.html#passing-providers-explicitly>.
 
 ### Software dependencies
 
@@ -43,8 +47,9 @@ The module depends on the following software components:
 
 This module makes use of the output from other modules:
 
-- Cluster - github.com/cloud-native-toolkit/terraform-ibm-container-platform.git
-- Namespace - github.com/cloud-native-toolkit/terraform-cluster-namespace.git
+- VPC - github.com/cloud-native-toolkit/terraform-ibm-vpc
+- Subnet - github.com/cloud-native-toolkit/terraform-ibm-vpc-subnets
+- SSH Key - github.com/cloud-native-toolkit/terraform-ibm-vpc-ssh
 - etc
 
 ### Example usage
@@ -94,7 +99,7 @@ on:
     branches: [ main ]
 ```
 
-The `verify` job checks out the module and deploys the terraform template in the `test/stages` folder. (More on the details of this folder in a later section.) It applies the testcase(s) listed in the `strategy.matrix.testcase` variable against the terraform template to validate the module logic. It then runs the `.github/scripts/validate-deploy.sh` to verify that everything was deployed successfully. **Note:** This script should be customized to validate the resources provisioned by the module. After the deploy is completed, the destroy logic is also applied to validate the destroy logic and to clean up after the test. The parameters for the test case are defined in https://github.com/cloud-native-toolkit/action-module-verify/tree/main/env. New test cases can be added via pull request.
+The `verify` job checks out the module and deploys the terraform template in the `test/stages` folder. (More on the details of this folder in a later section.) It applies the testcase(s) listed in the `strategy.matrix.testcase` variable against the terraform template to validate the module logic. It then runs the `.github/scripts/validate-deploy.sh` to verify that everything was deployed successfully. **Note:** This script should be customized to validate the resources provisioned by the module. After the deploy is completed, the destroy logic is also applied to validate the destroy logic and to clean up after the test. The parameters for the test case are defined in <https://github.com/cloud-native-toolkit/action-module-verify/tree/main/env>. New test cases can be added via pull request.
 
 The `verifyMetadata` job checks out the module and validates the module metadata against the module metadata schema to ensure the structure is valid.
 
@@ -193,7 +198,7 @@ The `test/stages` folder contains the terraform template needed to execute the m
 
 1. Fork the module git repository into your personal org
 2. In your forked repository, add the following secrets (note: if you are working in the repo in the Cloud Native Toolkit, these secrets are already available):
-  - __IBMCLOUD_API_KEY__ - an API Key to an IBM Cloud account where you can provision the test instances of any resources you need
+    - __IBMCLOUD_API_KEY__ - an API Key to an IBM Cloud account where you can provision the test instances of any resources you need
 3. Create a branch in the forked repository where you will do your work
 4. Create a [draft pull request](https://github.blog/2019-02-14-introducing-draft-pull-requests/) in the Cloud Native Toolkit repository for your branch as soon as you push your first change. Add labels to the pull request for the type of change (`enhancement`, `bug`, `chore`) and the type of release (`major`, `minor`, `patch`) to impact the generated release documentation.
 5. When the changes are completed and the automated checks are running successfully, mark the pull request as "Ready to review".

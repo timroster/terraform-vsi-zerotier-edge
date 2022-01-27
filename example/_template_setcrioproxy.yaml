@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: https-proxy-mod
+  namespace: kube-system
+  labels:
+    tier: management
+    app: https-proxy-mod
+spec:
+  selector:
+    matchLabels:
+      name: https-proxy-mod
+  template:
+    metadata:
+      labels:
+        name: https-proxy-mod
+    spec:
+      initContainers:
+        - command: ["/bin/sh", "-c"]
+          args:
+            - >
+              VPCSUBNETS="CLUSTER_VPC_SUBNETS";
+              echo NO_PROXY="${VPCSUBNETS},localhost,127.0.0.1,172.20.0.1,172.21.0.0/16,172.17.0.0/18,161.26.0.0/16,166.8.0.0/14,172.20.0.0/16"  > /host/etc/sysconfig/crio-network;
+              echo HTTP_PROXY="http://PROXY_IP:3128/" >> /host/etc/sysconfig/crio-network;
+              echo HTTPS_PROXY="http://PROXY_IP:3128/" >> /host/etc/sysconfig/crio-network;
+          image: quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:3d0aa55199bceb4c94698432df382b1d7289bf361a35ca4954a5a255b82a0e03
+          imagePullPolicy: IfNotPresent
+          name: sysctl
+          resources: {}
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: host
+              mountPath: /host
+      containers:
+        - resources:
+            requests:
+              cpu: 10m
+          image: quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:3d0aa55199bceb4c94698432df382b1d7289bf361a35ca4954a5a255b82a0e03
+          name: sleepforever
+          command: ["/bin/sh", "-c"]
+          args:
+            - >
+              while true; do
+                sleep 100000;
+              done
+      tolerations:
+      - operator: Exists
+      volumes:
+        - name: host
+          hostPath:
+            path: /
+            type: Directory
