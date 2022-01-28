@@ -20,7 +20,7 @@ spec:
           args:
             - >
               VPCSUBNETS="CLUSTER_VPC_SUBNETS";
-              echo NO_PROXY="${VPCSUBNETS},localhost,127.0.0.1,172.20.0.1,172.21.0.0/16,172.17.0.0/18,161.26.0.0/16,166.8.0.0/14,172.20.0.0/16"  > /host/etc/sysconfig/crio-network;
+              echo NO_PROXY="${VPCSUBNETS},cluster.local,.svc,localhost,127.0.0.1,172.20.0.1,172.21.0.0/16,172.17.0.0/18,161.26.0.0/16,166.8.0.0/14,172.20.0.0/16"  > /host/etc/sysconfig/crio-network;
               echo HTTP_PROXY="http://PROXY_IP:3128/" >> /host/etc/sysconfig/crio-network;
               echo HTTPS_PROXY="http://PROXY_IP:3128/" >> /host/etc/sysconfig/crio-network;
           image: quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:3d0aa55199bceb4c94698432df382b1d7289bf361a35ca4954a5a255b82a0e03
