@@ -3,8 +3,8 @@ CLUSTER=$1
 PROXY_IP=$2
 
 # patch template files with IP address of squid proxy:
-sed 's/PROXY_IP/$2/' _template_proxy-config.yaml > proxy-config.yaml
-sed 's/PROXY_IP/$2/' _template_setcrioproxy.yaml > setcrioproxy.yaml
+sed "s/PROXY_IP/${PROXY_IP}/" _template_proxy-config.yaml > proxy-config.yaml
+sed "s/PROXY_IP/${PROXY_IP}/" _template_setcrioproxy.yaml > setcrioproxy.yaml
 
 # apply proxy configuration to cluster
 oc apply -f proxy-config.yaml
@@ -16,8 +16,8 @@ sleep 300
 
 # do a rolling reboot of all workers
 echo "Performing rolling reboot of workers, 10 min wait after each reboot"
-for WORKER in ` ibmcloud cs worker ls --cluster $CLUSTER | grep kube | cut -d' ' -f1`; do
+for WORKER in $(ibmcloud cs worker ls --cluster ${CLUSTER} | grep kube | cut -d' ' -f1); do
     echo "rebooting $WORKER..."
-    ibmcloud cs worker reboot -f --skip-master-health --worker $WORKER --cluster $CLUSTER;
+    ibmcloud cs worker reboot -f --skip-master-health --worker $WORKER --cluster ${CLUSTER};
     sleep 600;
 done
