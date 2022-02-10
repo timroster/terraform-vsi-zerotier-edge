@@ -30,11 +30,21 @@ module "zerotier-vnf" {
   zt_network          = var.zt_network
 }
 
-output "private_ip_address" {
-  value = module.zerotier-vnf.private_ips
+resource "local_file" "proxy-config" {
+  filename = "proxy-config.yaml"
+  content  = module.zerotier-vnf.proxy-config-yaml
+}
+
+resource "local_file" "setcrioproxy" {
+  filename = "setcrioproxy.yaml"
+  content  = module.zerotier-vnf.setcrioproxy-yaml
 }
 
 output "zerotier_network_cidr" {
   description = "ZeroTier LAN address"
   value       = module.zerotier-vnf.zerotier_network_cidr
+}
+
+output "private_ip_address" {
+  value = module.zerotier-vnf.private_ips
 }

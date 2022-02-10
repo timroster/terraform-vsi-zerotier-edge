@@ -137,3 +137,9 @@ variable "zt_network" {
     error_message = "The zt_network id must be be 16 characters long."
   }
 }
+
+variable "allow_network" {
+  type        = string
+  description = "The internal ip address range that should be allowed to use the proxy server"
+  default     = "10.0.0.0/8"
+}

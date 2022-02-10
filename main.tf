@@ -162,7 +162,7 @@ data "cloudinit_config" "this" {
   part {
     filename     = "init.sh"
     content_type = "text/x-shellscript"
-    content = templatefile("${path.module}/scripts/${var.script}", {
+    content = templatefile("${path.module}/templates/${var.script}", {
       "zt_network"  = var.zt_network
     })
   }
@@ -189,4 +189,14 @@ resource "ibm_is_vpc_routing_table_route" "zt_ibm_is_vpc_routing_table_route" {
   destination = local.zt_network_cidr[count.index]
   action = "deliver"
   next_hop = ibm_is_instance.vsi[0].primary_network_interface[0].primary_ipv4_address
+}
+
+locals {
+  proxy-config = templatefile("${path.module}/templates/_template_proxy-config.yaml", {
+    "proxy_ip" = ibm_is_instance.vsi[0].primary_network_interface[0].primary_ipv4_address
+  })
+  crio-config = templatefile("${path.module}/templates/_template_setcrioproxy.yaml", {
+    "proxy_ip" = ibm_is_instance.vsi[0].primary_network_interface[0].primary_ipv4_address,
+    "cluster_local" = var.allow_network
+  })
 }

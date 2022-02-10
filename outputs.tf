@@ -51,3 +51,13 @@ output "zerotier_network_cidr" {
   description = "LAN for zerotier"
   value       = local.zt_network_cidr
 }
+
+output "proxy-config-yaml" {
+  description = "apply to cluster to enable system use of proxy"
+  value = local.proxy-config
+}
+
+output "setcrioproxy-yaml" {
+  description = "apply to cluster to enable system use of proxy"
+  value = local.crio-config
+}

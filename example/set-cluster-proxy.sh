@@ -1,13 +1,5 @@
 #!/bin/sh
 CLUSTER=$1
-PROXY_IP=$2
-CLUSTER_VPC_SUBNET=$3
-
-# patch template files with IP address of squid proxy:
-sed "s/PROXY_IP/${PROXY_IP}/" _template_proxy-config.yaml > proxy-config.yaml
-sed "s/PROXY_IP/${PROXY_IP}/" _template_setcrioproxy.yaml > setcrioproxy.yaml.$$
-sed "s#CLUSTER_VPC_SUBNETS#${CLUSTER_VPC_SUBNET}#" setcrioproxy.yaml.$$ > setcrioproxy.yaml
-rm -rf setcrioproxy.yaml.$$
 
 # apply proxy configuration to cluster
 oc apply -f proxy-config.yaml

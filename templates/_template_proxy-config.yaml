@@ -3,8 +3,8 @@ kind: Proxy
 metadata:
   name: cluster
 spec:
-  httpProxy: http://PROXY_IP:3128 
-  httpsProxy: http://PROXY_IP:3128 
+  httpProxy: http://${proxy_ip}:3128 
+  httpsProxy: http://${proxy_ip}:3128 
   noProxy: s3.direct.us.cloud-object-storage.appdomain.cloud
   readinessEndpoints:
   - http://www.google.com 
