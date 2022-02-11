@@ -20,7 +20,7 @@ locals {
       port_min = 9993
       port_max = 9993
     }
-  }, {
+    }, {
     name      = "squid-inbound"
     direction = "inbound"
     remote    = "0.0.0.0/0"
@@ -28,7 +28,7 @@ locals {
       port_min = 3128
       port_max = 3128
     }
-  }, {
+    }, {
     name      = "zt-outbound-udp"
     direction = "outbound"
     remote    = "0.0.0.0/0"
@@ -36,7 +36,7 @@ locals {
       port_min = 1
       port_max = 65535
     }
-  }, {
+    }, {
     name      = "zt-outbound-tcp"
     direction = "outbound"
     remote    = "0.0.0.0/0"
@@ -46,32 +46,32 @@ locals {
     }
   }]
   security_group_rules = concat(local.ssh_security_group_rule, var.security_group_rules, local.server_network_rules)
-  zt_network_cidr = [for route in data.zerotier_network.this.route : route.target if route.via == ""]
+  zt_network_cidr      = [for route in data.zerotier_network.this.route : route.target if route.via == ""]
 }
 
 # get the information about the existing vpc instance
-data ibm_is_vpc vpc {
+data "ibm_is_vpc" "vpc" {
   depends_on = [null_resource.print-names]
 
-  name           = var.vpc_name
+  name = var.vpc_name
 }
 
-data ibm_is_subnet vpc_subnet {
+data "ibm_is_subnet" "vpc_subnet" {
   count = var.vpc_subnet_count
 
   identifier = var.vpc_subnets[count.index].id
 }
 
 data "ibm_is_vpc_default_routing_table" "vpc_route" {
-    vpc = data.ibm_is_vpc.vpc.id
+  vpc = data.ibm_is_vpc.vpc.id
 }
 
 # get details on zerotier network
-data zerotier_network this {
+data "zerotier_network" "this" {
   id = var.zt_network
 }
 
-resource null_resource print-names {
+resource "null_resource" "print-names" {
   provisioner "local-exec" {
     command = "echo 'VPC name: ${var.vpc_name}'"
   }
@@ -80,13 +80,13 @@ resource null_resource print-names {
   }
 }
 
-resource ibm_is_security_group vsi {
+resource "ibm_is_security_group" "vsi" {
   name           = "${local.name}-group"
   vpc            = data.ibm_is_vpc.vpc.id
   resource_group = var.resource_group_id
 }
 
-resource ibm_is_security_group_rule additional_rules {
+resource "ibm_is_security_group_rule" "additional_rules" {
   count = length(local.security_group_rules)
 
   group      = ibm_is_security_group.vsi.id
@@ -95,7 +95,7 @@ resource ibm_is_security_group_rule additional_rules {
   ip_version = lookup(local.security_group_rules[count.index], "ip_version", null)
 
   dynamic "tcp" {
-    for_each = lookup(local.security_group_rules[count.index], "tcp", null) != null ? [ lookup(local.security_group_rules[count.index], "tcp", null) ] : []
+    for_each = lookup(local.security_group_rules[count.index], "tcp", null) != null ? [lookup(local.security_group_rules[count.index], "tcp", null)] : []
 
     content {
       port_min = tcp.value["port_min"]
@@ -104,7 +104,7 @@ resource ibm_is_security_group_rule additional_rules {
   }
 
   dynamic "udp" {
-    for_each = lookup(local.security_group_rules[count.index], "udp", null) != null ? [ lookup(local.security_group_rules[count.index], "udp", null) ] : []
+    for_each = lookup(local.security_group_rules[count.index], "udp", null) != null ? [lookup(local.security_group_rules[count.index], "udp", null)] : []
 
     content {
       port_min = udp.value["port_min"]
@@ -113,7 +113,7 @@ resource ibm_is_security_group_rule additional_rules {
   }
 
   dynamic "icmp" {
-    for_each = lookup(local.security_group_rules[count.index], "icmp", null) != null ? [ lookup(local.security_group_rules[count.index], "icmp", null) ] : []
+    for_each = lookup(local.security_group_rules[count.index], "icmp", null) != null ? [lookup(local.security_group_rules[count.index], "icmp", null)] : []
 
     content {
       type = icmp.value["type"]
@@ -122,28 +122,28 @@ resource ibm_is_security_group_rule additional_rules {
   }
 }
 
-data ibm_is_image image {
+data "ibm_is_image" "image" {
   name = var.image_name
 }
 
-resource ibm_is_instance vsi {
+resource "ibm_is_instance" "vsi" {
   depends_on = [ibm_is_security_group_rule.additional_rules]
-  count = var.vpc_subnet_count
+  count      = var.vpc_subnet_count
 
-  name           = "${local.name}${format("%02s", count.index)}"
-  vpc            = data.ibm_is_vpc.vpc.id
-  zone           = var.vpc_subnets[count.index].zone
-  profile        = var.profile_name
-  image          = data.ibm_is_image.image.id
-  keys           = tolist(setsubtract([var.ssh_key_id], [""]))
-  resource_group = var.resource_group_id
+  name               = "${local.name}${format("%02s", count.index)}"
+  vpc                = data.ibm_is_vpc.vpc.id
+  zone               = var.vpc_subnets[count.index].zone
+  profile            = var.profile_name
+  image              = data.ibm_is_image.image.id
+  keys               = tolist(setsubtract([var.ssh_key_id], [""]))
+  resource_group     = var.resource_group_id
   auto_delete_volume = var.auto_delete_volume
 
   user_data = data.cloudinit_config.this.rendered
 
   primary_network_interface {
-    subnet          = var.vpc_subnets[count.index].id
-    security_groups = [local.base_security_group, ibm_is_security_group.vsi.id]
+    subnet            = var.vpc_subnets[count.index].id
+    security_groups   = [local.base_security_group, ibm_is_security_group.vsi.id]
     allow_ip_spoofing = true
   }
 
@@ -163,12 +163,12 @@ data "cloudinit_config" "this" {
     filename     = "init.sh"
     content_type = "text/x-shellscript"
     content = templatefile("${path.module}/templates/${var.script}", {
-      "zt_network"  = var.zt_network
+      "zt_network" = var.zt_network
     })
   }
 }
 
-resource ibm_is_floating_ip vsi {
+resource "ibm_is_floating_ip" "vsi" {
   count = var.create_public_ip ? var.vpc_subnet_count : 0
 
   name           = "${local.name}${format("%02s", count.index)}-ip"
@@ -182,13 +182,13 @@ resource ibm_is_floating_ip vsi {
 resource "ibm_is_vpc_routing_table_route" "zt_ibm_is_vpc_routing_table_route" {
   count = length(local.zt_network_cidr)
 
-  vpc = data.ibm_is_vpc.vpc.id
+  vpc           = data.ibm_is_vpc.vpc.id
   routing_table = data.ibm_is_vpc_default_routing_table.vpc_route.id
-  zone = var.vpc_subnets[0].zone
-  name = "${local.name}${format("%02s", count.index)}-ztgw"
-  destination = local.zt_network_cidr[count.index]
-  action = "deliver"
-  next_hop = ibm_is_instance.vsi[0].primary_network_interface[0].primary_ipv4_address
+  zone          = var.vpc_subnets[0].zone
+  name          = "${local.name}${format("%02s", count.index)}-ztgw"
+  destination   = local.zt_network_cidr[count.index]
+  action        = "deliver"
+  next_hop      = ibm_is_instance.vsi[0].primary_network_interface[0].primary_ipv4_address
 }
 
 locals {
@@ -196,7 +196,7 @@ locals {
     "proxy_ip" = ibm_is_instance.vsi[0].primary_network_interface[0].primary_ipv4_address
   })
   crio-config = templatefile("${path.module}/templates/_template_setcrioproxy.yaml", {
-    "proxy_ip" = ibm_is_instance.vsi[0].primary_network_interface[0].primary_ipv4_address,
+    "proxy_ip"      = ibm_is_instance.vsi[0].primary_network_interface[0].primary_ipv4_address,
     "cluster_local" = var.allow_network
   })
 }

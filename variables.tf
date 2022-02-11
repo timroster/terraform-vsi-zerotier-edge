@@ -80,7 +80,7 @@ variable "vpc_subnet_count" {
 }
 
 variable "vpc_subnets" {
-  type        = list(object({
+  type = list(object({
     label = string
     id    = string
     zone  = string
@@ -114,7 +114,7 @@ variable "security_group_rules" {
   #   })),
   # }))
   description = "List of security group rules to set on the bastion security group in addition to the SSH rules"
-  default = []
+  default     = []
 }
 
 variable "allow_ssh_from" {
@@ -125,7 +125,7 @@ variable "allow_ssh_from" {
 
 ## variables used in init script
 variable "script" {
-  type = string
+  type    = string
   default = "init-server.tpl"
 }
 

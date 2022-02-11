@@ -30,7 +30,7 @@ variable "vpc_subnet_count" {
 }
 
 variable "vpc_subnets" {
-  type        = list(object({
+  type = list(object({
     label = string
     id    = string
     zone  = string
