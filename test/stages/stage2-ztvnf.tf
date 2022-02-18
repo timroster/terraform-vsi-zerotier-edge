@@ -11,11 +11,4 @@ module "ztvnf" {
   allow_deprecated_image = false
   create_public_ip       = true
   allow_ssh_from         = "0.0.0.0/0"
-  acl_rules = [{
-    name        = "outbound-all"
-    action      = "allow"
-    direction   = "outbound"
-    source      = "0.0.0.0/0"
-    destination = "0.0.0.0/0"
-  }]
 }
