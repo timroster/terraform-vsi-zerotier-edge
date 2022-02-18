@@ -30,5 +30,5 @@ variable "vpc_subnet_count" {
 variable "zt_network" {
   type        = string
   description = "A zerotier network to use for testing access"
-  default     = a84ac5c10aaed526
+  default     = "a84ac5c10aaed526"
 }
