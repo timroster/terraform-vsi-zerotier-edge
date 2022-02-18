@@ -26,9 +26,3 @@ variable "vpc_subnet_count" {
   description = "The number of subnets to create for the VPC instance"
   default     = 0
 }
-
-variable "zt_network" {
-  type        = string
-  description = "A zerotier network to use for testing access"
-  default     = "a84ac5c10aaed526"
-}
