@@ -57,4 +57,3 @@ variable "zt_network" {
     error_message = "The zt_network id must be be 16 characters long."
   }
 }
-
