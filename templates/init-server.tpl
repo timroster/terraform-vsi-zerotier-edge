@@ -2,10 +2,15 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-echo "-- squid and net tools install --"
-dnf install -y squid net-tools iptables-services iptables-utils
-systemctl enable squid
-systemctl start squid
+echo "-- net tools install --"
+dnf install -y net-tools iptables-services iptables-utils
+
+if [ "${install_squid}" = "true" ]; then
+  echo "-- squid install --"
+  dnf install -y squid
+  systemctl enable squid
+  systemctl start squid
+fi
 
 echo "-- iptables --"
 iptables -I INPUT -p udp --dport 9993 -j ACCEPT
@@ -22,8 +27,18 @@ echo "# allow IP forwarding" >> /etc/sysctl.conf
 echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf
 sysctl -w net.ipv4.conf.all.forwarding=1
 
+echo "-- ZeroTier identity --"
+mkdir -p /var/lib/zerotier-one/
+echo ${zt_identity.public_key} > /var/lib/zerotier-one/identity.public
+chmod 0644 /var/lib/zerotier-one/identity.public
+echo ${zt_identity.private_key} > /var/lib/zerotier-one/identity.secret
+chmod 0600 /var/lib/zerotier-one/identity.secret
+
 echo "-- ZeroTier --"
 curl -s https://install.zerotier.com | bash
+
+# give ZeroTier service a moment to start...
+sleep 30
 
 zerotier-cli join ${zt_network}
 while ! zerotier-cli listnetworks | grep ${zt_network} | grep OK ;

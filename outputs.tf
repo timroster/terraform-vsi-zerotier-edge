@@ -1,35 +1,35 @@
-output ids {
+output "ids" {
   description = "The instance id"
   value       = ibm_is_instance.vsi[*].id
 }
 
-output names {
+output "names" {
   description = "The instance names"
   value       = ibm_is_instance.vsi[*].name
 }
 
-output vpc_name {
+output "vpc_name" {
   value = data.ibm_is_vpc.vpc.name
 }
 
-output count {
+output "count" {
   value = var.vpc_subnet_count
 }
 
-output instance_count {
+output "instance_count" {
   value = var.vpc_subnet_count
 }
 
-output public_ips {
-  value       = var.create_public_ip ? ibm_is_floating_ip.vsi[*].address : []
+output "public_ips" {
+  value = var.create_public_ip ? ibm_is_floating_ip.vsi[*].address : []
 }
 
-output private_ips {
+output "private_ips" {
   value = ibm_is_instance.vsi[*].primary_network_interface[0].primary_ipv4_address
 }
 
-output network_interface_ids {
-   value = ibm_is_instance.vsi[*].primary_network_interface[0].id
+output "network_interface_ids" {
+  value = ibm_is_instance.vsi[*].primary_network_interface[0].id
 }
 
 output "security_group_id" {
@@ -54,10 +54,10 @@ output "zerotier_network_cidr" {
 
 output "proxy-config-yaml" {
   description = "apply to cluster to enable system use of proxy"
-  value = local.proxy-config
+  value       = local.proxy-config
 }
 
 output "setcrioproxy-yaml" {
   description = "apply to cluster to enable system use of proxy"
-  value = local.crio-config
+  value       = local.crio-config
 }

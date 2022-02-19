@@ -30,7 +30,7 @@ variable "vpc_subnet_count" {
 }
 
 variable "vpc_subnets" {
-  type        = list(object({
+  type = list(object({
     label = string
     id    = string
     zone  = string
@@ -57,4 +57,3 @@ variable "zt_network" {
     error_message = "The zt_network id must be be 16 characters long."
   }
 }
-
