@@ -1,5 +1,6 @@
 module "zerotier-vnf" {
   source = "./module"
+  #source = "../../"
 
   resource_group_id = module.resource_group.id
   region            = var.region
