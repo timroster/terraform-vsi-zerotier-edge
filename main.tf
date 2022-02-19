@@ -68,7 +68,6 @@ resource "null_resource" "print-names" {
 # get the information about the existing vpc instance
 data "ibm_is_vpc" "vpc" {
   depends_on = [null_resource.print-names]
-
   name = var.vpc_name
 }
 
