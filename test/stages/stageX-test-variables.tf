@@ -7,6 +7,6 @@ resource "null_resource" "write_private_key" {
 
 resource "null_resource" "write_public_ip" {
   provisioner "local-exec" {
-    command = "echo -n '${module.ztvnf.public_ips[0]}' > .public-ip"
+    command = "echo -n '${module.zerotier-vnf.public_ips[0]}' > .public-ip"
   }
 }

@@ -1,28 +1,36 @@
-
-# Resource Group Variables
+## IBM Cloud account variables
 variable "resource_group_name" {
   type        = string
-  description = "Existing resource group where the IKS cluster will be provisioned."
-}
-
-variable "ibmcloud_api_key" {
-  type        = string
-  description = "The api key for IBM Cloud access"
+  description = "The id of the IBM Cloud resource group where the VPC has been provisioned."
 }
 
 variable "region" {
   type        = string
-  description = "Region for VLANs defined in private_vlan_number and public_vlan_number."
+  description = "The IBM Cloud region where the cluster will be/has been installed."
 }
 
-variable "name_prefix" {
+variable "ibmcloud_api_key" {
   type        = string
-  description = "Prefix name that should be used for the cluster and services. If not provided then resource_group_name will be used"
-  default     = ""
+  description = "The IBM Cloud api token"
 }
 
 variable "vpc_subnet_count" {
   type        = number
-  description = "The number of subnets to create for the VPC instance"
+  description = "Number of vpc subnets"
   default     = 0
+}
+
+variable "name_prefix" {
+  type        = string
+  description = "Name prefix for resources"
+}
+
+variable "zt_network" {
+  type = string
+
+  validation {
+    condition     = length(var.zt_network) == 16
+    error_message = "The zt_network id must be be 16 characters long."
+  }
+  default = "a84ac5c10aaed526"
 }

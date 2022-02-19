@@ -50,8 +50,19 @@ locals {
   zt_network_cidr      = [for route in data.zerotier_network.this.route : route.target if route.via == ""]
 }
 
+resource "null_resource" "print-names" {
+  provisioner "local-exec" {
+    command = "echo 'VPC name: ${var.vpc_name}'"
+  }
+  provisioner "local-exec" {
+    command = "echo 'Resource group id: ${var.resource_group_id}'"
+  }
+}
+
 # get the information about the existing vpc instance
 data "ibm_is_vpc" "vpc" {
+  depends_on = [null_resource.print-names]
+  
   name = var.vpc_name
 }
 
