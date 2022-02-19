@@ -24,13 +24,3 @@ variable "name_prefix" {
   type        = string
   description = "Name prefix for resources"
 }
-
-variable "zt_network" {
-  type = string
-
-  validation {
-    condition     = length(var.zt_network) == 16
-    error_message = "The zt_network id must be be 16 characters long."
-  }
-  default = "a84ac5c10aaed526"
-}

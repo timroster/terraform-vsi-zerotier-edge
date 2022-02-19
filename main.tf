@@ -47,7 +47,13 @@ locals {
     }
   }]
   security_group_rules = concat(local.ssh_security_group_rule, var.security_group_rules, local.squid_server_network_rule, local.zt_server_network_rules)
-  zt_network_cidr      = [for route in data.zerotier_network.this.route : route.target if route.via == ""]
+  zt_network_cidr      = try([for route in data.zerotier_network.this.route : route.target if route.via == ""][0],"172.16.0.0/${random_integer.cidr.result}")
+
+}
+
+resource "random_integer" "cidr" {
+  min = 8
+  max = 32
 }
 
 resource "null_resource" "print-names" {
@@ -62,7 +68,7 @@ resource "null_resource" "print-names" {
 # get the information about the existing vpc instance
 data "ibm_is_vpc" "vpc" {
   depends_on = [null_resource.print-names]
-  
+
   name = var.vpc_name
 }
 
@@ -78,6 +84,8 @@ data "ibm_is_vpc_default_routing_table" "vpc_route" {
 
 # get details on zerotier network
 data "zerotier_network" "this" {
+  depends_on = [null_resource.print-names]
+  
   id = var.zt_network
 }
 
@@ -204,7 +212,7 @@ resource "ibm_is_vpc_routing_table_route" "zt_ibm_is_vpc_routing_table_route" {
   routing_table = data.ibm_is_vpc_default_routing_table.vpc_route.id
   zone          = var.vpc_subnets[count.index].zone
   name          = "${local.name}${format("%02s", count.index)}-ztgw"
-  destination   = local.zt_network_cidr[0]
+  destination   = local.zt_network_cidr
   action        = "deliver"
   next_hop      = ibm_is_instance.vsi[count.index].primary_network_interface[0].primary_ipv4_address
 }

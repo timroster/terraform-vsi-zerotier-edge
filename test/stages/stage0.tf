@@ -5,5 +5,8 @@ terraform {
     ibm = {
       source = "ibm-cloud/ibm"
     }
+    zerotier = {
+      source = "zerotier/zerotier"
+    }
   }
 }
