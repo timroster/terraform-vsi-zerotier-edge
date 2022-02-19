@@ -113,7 +113,7 @@ variable "security_group_rules" {
   #     code=optional(number)
   #   })),
   # }))
-  description = "List of security group rules to set on the bastion security group in addition to the SSH rules"
+  description = "List of security group rules to set on the zerotier security group in addition to the SSH rules"
   default     = []
 }
 
@@ -138,8 +138,34 @@ variable "zt_network" {
   }
 }
 
+variable "zt_instances" {
+  default = {
+    1 = {
+      ip_assignment = "192.168.192.100",
+      description   = "zt-vnf-zone-1",
+      route         = "10.16.0.0/18",
+    },
+    2 = {
+      ip_assignment = "192.168.192.101",
+      description   = "zt-vnf-zone-2",
+      route         = "10.16.64.0/18",
+    },
+    3 = {
+      ip_assignment = "192.168.192.102",
+      description   = "zt-vnf-zone-3",
+      route         = "10.16.128.0/18",
+    }
+  }
+}
+
 variable "allow_network" {
   type        = string
   description = "The internal ip address range that should be allowed to use the proxy server"
   default     = "10.0.0.0/8"
+}
+
+variable "provision_squid" {
+  type        = bool
+  description = "Set whether to allocate a public IP address for the virtual server instance"
+  default     = false
 }

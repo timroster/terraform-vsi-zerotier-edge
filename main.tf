@@ -1,6 +1,6 @@
 locals {
   subnets             = data.ibm_is_subnet.vpc_subnet
-  tags                = tolist(setsubtract(concat(var.tags, ["proxy"]), [""]))
+  tags                = tolist(setsubtract(concat(var.tags, ["zt-vnf"]), [""]))
   name                = "${replace(var.vpc_name, "/[^a-zA-Z0-9_\\-\\.]/", "")}-${var.label}"
   base_security_group = var.base_security_group != null ? var.base_security_group : data.ibm_is_vpc.vpc.default_security_group
   ssh_security_group_rule = var.allow_ssh_from != null ? [{
@@ -12,21 +12,22 @@ locals {
       port_max = 22
     }
   }] : []
-  server_network_rules = [{
+  squid_server_network_rule = var.provision_squid ? [{
+    name      = "squid-inbound"
+    direction = "inbound"
+    remote    = var.allow_network
+    tcp = {
+      port_min = 3128
+      port_max = 3128
+    }
+  }] : []
+  zt_server_network_rules = [{
     name      = "zerotier-inbound"
     direction = "inbound"
     remote    = "0.0.0.0/0"
     udp = {
       port_min = 9993
       port_max = 9993
-    }
-    }, {
-    name      = "squid-inbound"
-    direction = "inbound"
-    remote    = "0.0.0.0/0"
-    tcp = {
-      port_min = 3128
-      port_max = 3128
     }
     }, {
     name      = "zt-outbound-udp"
@@ -45,14 +46,23 @@ locals {
       port_max = 65535
     }
   }]
-  security_group_rules = concat(local.ssh_security_group_rule, var.security_group_rules, local.server_network_rules)
+  security_group_rules = concat(local.ssh_security_group_rule, var.security_group_rules, local.squid_server_network_rule, local.zt_server_network_rules)
   zt_network_cidr      = [for route in data.zerotier_network.this.route : route.target if route.via == ""]
+}
+
+resource "null_resource" "print-names" {
+  provisioner "local-exec" {
+    command = "echo 'VPC name: ${var.vpc_name}'"
+  }
+  provisioner "local-exec" {
+    command = "echo 'Resource group id: ${var.resource_group_id}'"
+  }
 }
 
 # get the information about the existing vpc instance
 data "ibm_is_vpc" "vpc" {
   depends_on = [null_resource.print-names]
-
+  
   name = var.vpc_name
 }
 
@@ -71,13 +81,18 @@ data "zerotier_network" "this" {
   id = var.zt_network
 }
 
-resource "null_resource" "print-names" {
-  provisioner "local-exec" {
-    command = "echo 'VPC name: ${var.vpc_name}'"
-  }
-  provisioner "local-exec" {
-    command = "echo 'Resource group id: ${var.resource_group_id}'"
-  }
+resource "zerotier_identity" "instances" {
+  for_each = toset([for v in var.vpc_subnets : trimprefix(v.zone, "${var.region}-")])
+}
+
+resource "zerotier_member" "instances" {
+  for_each           = toset([for v in var.vpc_subnets : trimprefix(v.zone, "${var.region}-")])
+  name               = "${local.name}${format("%02s", each.key)}"
+  member_id          = zerotier_identity.instances[each.key].id
+  description        = var.zt_instances[each.key].description
+  network_id         = data.zerotier_network.this.id
+  no_auto_assign_ips = false
+  ip_assignments     = [ var.zt_instances[each.key].ip_assignment ]
 }
 
 resource "ibm_is_security_group" "vsi" {
@@ -139,7 +154,7 @@ resource "ibm_is_instance" "vsi" {
   resource_group     = var.resource_group_id
   auto_delete_volume = var.auto_delete_volume
 
-  user_data = data.cloudinit_config.this.rendered
+  user_data = data.cloudinit_config.this[trimprefix(var.vpc_subnets[count.index].zone, "${var.region}-")].rendered
 
   primary_network_interface {
     subnet            = var.vpc_subnets[count.index].id
@@ -156,6 +171,7 @@ resource "ibm_is_instance" "vsi" {
 }
 
 data "cloudinit_config" "this" {
+  for_each      = toset([for v in var.vpc_subnets : trimprefix(v.zone, "${var.region}-")])
   gzip          = false
   base64_encode = false
 
@@ -163,7 +179,9 @@ data "cloudinit_config" "this" {
     filename     = "init.sh"
     content_type = "text/x-shellscript"
     content = templatefile("${path.module}/templates/${var.script}", {
-      "zt_network" = var.zt_network
+      "zt_network"  = var.zt_network,
+      "zt_identity" = zerotier_identity.instances[each.key],
+      "install_squid" = tostring(var.provision_squid)
     })
   }
 }
@@ -180,23 +198,69 @@ resource "ibm_is_floating_ip" "vsi" {
 
 # add route to ZeroTier network through VSI
 resource "ibm_is_vpc_routing_table_route" "zt_ibm_is_vpc_routing_table_route" {
-  count = length(local.zt_network_cidr)
+  count = var.vpc_subnet_count
 
   vpc           = data.ibm_is_vpc.vpc.id
   routing_table = data.ibm_is_vpc_default_routing_table.vpc_route.id
-  zone          = var.vpc_subnets[0].zone
+  zone          = var.vpc_subnets[count.index].zone
   name          = "${local.name}${format("%02s", count.index)}-ztgw"
-  destination   = local.zt_network_cidr[count.index]
+  destination   = local.zt_network_cidr[0]
   action        = "deliver"
-  next_hop      = ibm_is_instance.vsi[0].primary_network_interface[0].primary_ipv4_address
+  next_hop      = ibm_is_instance.vsi[count.index].primary_network_interface[0].primary_ipv4_address
+}
+
+# squid_count of 1 means do not create ALB, irrespective of (bool)squid_provision
+resource "ibm_is_lb" "proxy-alb" {
+  count = local.squid_lb_count
+
+  name            = "${local.name}-alb"
+  subnets         = var.vpc_subnets[*].id
+  resource_group  = var.resource_group_id
+  type            = "private"
+  security_groups = [local.base_security_group]
+  tags            = local.tags
+}
+
+resource "ibm_is_lb_pool" "squid_pool" {
+  count = local.squid_lb_count
+
+  name                = "${local.name}-alb-pool"
+  lb                  = ibm_is_lb.proxy-alb[0].id
+  algorithm           = "round_robin"
+  protocol            = "tcp"
+  health_delay        = 60
+  health_retries      = 5
+  health_timeout      = 30
+  health_type         = "tcp"
+  health_monitor_port = 3128
+}
+
+resource "ibm_is_lb_pool_member" "squid_lb_mem" {
+  count = local.squid_lb_count == 1 ? var.vpc_subnet_count : 0
+
+  lb             = ibm_is_lb.proxy-alb[0].id
+  pool           = ibm_is_lb_pool.squid_pool[0].id
+  port           = 3128
+  target_address = ibm_is_instance.vsi[count.index].primary_network_interface[0].primary_ipv4_address
+}
+
+resource "ibm_is_lb_listener" "squid_lb_listener" {
+  count = local.squid_lb_count
+
+  lb           = ibm_is_lb.proxy-alb[0].id
+  default_pool = ibm_is_lb_pool.squid_pool[0].id
+  port         = "3128"
+  protocol     = "tcp"
 }
 
 locals {
-  proxy-config = templatefile("${path.module}/templates/_template_proxy-config.yaml", {
-    "proxy_ip" = ibm_is_instance.vsi[0].primary_network_interface[0].primary_ipv4_address
-  })
-  crio-config = templatefile("${path.module}/templates/_template_setcrioproxy.yaml", {
-    "proxy_ip"      = ibm_is_instance.vsi[0].primary_network_interface[0].primary_ipv4_address,
+  squid_lb_count  = (var.provision_squid && (var.vpc_subnet_count > 1)) ? 1 : 0
+  proxy-ip     =  local.squid_lb_count == 0 ? ibm_is_instance.vsi[0].primary_network_interface[0].primary_ipv4_address : ibm_is_lb.proxy-alb[0].hostname
+  proxy-config = var.provision_squid ? templatefile("${path.module}/templates/_template_proxy-config.yaml", {
+    "proxy_ip" = local.proxy-ip 
+  }) : null
+  crio-config = var.provision_squid ? templatefile("${path.module}/templates/_template_setcrioproxy.yaml", {
+    "proxy_ip"      = local.proxy-ip,
     "cluster_local" = var.allow_network
-  })
+  }) : null
 }
