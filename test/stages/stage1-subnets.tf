@@ -14,5 +14,23 @@ module "subnets" {
     direction   = "inbound"
     source      = "0.0.0.0/0"
     destination = "0.0.0.0/0"
+    tcp={
+       port_min=22,
+       port_max=22,
+       source_port_min=1,
+       source_port_max=65535
+     }
+  },{
+    name        = "outbound-ssh"
+    action      = "allow"
+    direction   = "outbound"
+    source      = "0.0.0.0/0"
+    destination = "0.0.0.0/0"
+      tcp={
+       port_min=1,
+       port_max=65535,
+       source_port_min=22,
+       source_port_max=22
+     }
   }]
 }

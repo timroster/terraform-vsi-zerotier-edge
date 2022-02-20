@@ -1,6 +1,6 @@
 module "zerotier-vnf" {
-  source = "./module"
-  #source = "../../"
+  #source = "./module"
+  source = "../../"
 
   resource_group_id = module.resource_group.id
   region            = var.region
@@ -11,4 +11,5 @@ module "zerotier-vnf" {
   vpc_subnets       = module.subnets.subnets
   zt_network        = module.zt-network.id
   create_public_ip  = true
+  allow_ssh_from    = "0.0.0.0/0"
 }
