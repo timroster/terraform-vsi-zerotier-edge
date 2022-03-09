@@ -35,6 +35,8 @@ echo ${zt_identity.private_key} > /var/lib/zerotier-one/identity.secret
 chmod 0600 /var/lib/zerotier-one/identity.secret
 
 echo "-- ZeroTier --"
+### temp workaround for: https://github.com/zerotier/ZeroTierOne/issues/1575
+dnf install -y compat-openssl10
 curl -s https://install.zerotier.com | bash
 
 # give ZeroTier service a moment to start...
