@@ -18,7 +18,7 @@ variable "ibmcloud_api_key" {
 variable "image_name" {
   type        = string
   description = "The name of the image to use for the virtual server"
-  default     = "ibm-rocky-linux-8-5-minimal-amd64-1"
+  default     = "ibm-rocky-linux-8-6-minimal-amd64-1"
 }
 
 variable "profile_name" {
