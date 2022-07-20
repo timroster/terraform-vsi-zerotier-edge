@@ -28,16 +28,7 @@ module "zerotier-vnf" {
   vpc_subnet_count  = var.vpc_subnet_count
   vpc_subnets       = var.vpc_subnets
   zt_network        = var.zt_network
-}
-
-resource "local_file" "proxy-config" {
-  filename = "proxy-config.yaml"
-  content  = module.zerotier-vnf.proxy-config-yaml
-}
-
-resource "local_file" "setcrioproxy" {
-  filename = "setcrioproxy.yaml"
-  content  = module.zerotier-vnf.setcrioproxy-yaml
+  zt_network_cidr   = var.zt_network_cidr
 }
 
 output "zerotier_network_cidr" {

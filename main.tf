@@ -12,15 +12,6 @@ locals {
       port_max = 22
     }
   }] : []
-  squid_server_network_rule = var.provision_squid ? [{
-    name      = "squid-inbound"
-    direction = "inbound"
-    remote    = var.allow_network
-    tcp = {
-      port_min = 3128
-      port_max = 3128
-    }
-  }] : []
   zt_server_network_rules = [{
     name      = "zerotier-inbound"
     direction = "inbound"
@@ -46,9 +37,9 @@ locals {
       port_max = 65535
     }
   }]
-  security_group_rules = concat(local.ssh_security_group_rule, var.security_group_rules, local.squid_server_network_rule, local.zt_server_network_rules)
-  zt_network_cidr      = try([for route in data.zerotier_network.this.route : route.target if route.via == ""][0],"172.16.0.0/${random_integer.cidr.result}")
-
+  security_group_rules = concat(local.ssh_security_group_rule, var.security_group_rules, local.zt_server_network_rules)
+  # zt_network_cidr      = try([for route in data.zerotier_network.this.route : route.target if route.via == ""][0],"172.16.0.0/${random_integer.cidr.result}")
+  zt_network_cidr = var.zt_network_cidr
 }
 
 resource "random_integer" "cidr" {
@@ -88,6 +79,9 @@ data "zerotier_network" "this" {
   id = var.zt_network
 }
 
+## At the present time, the module will only create a single instance, but this logic is being
+#  retained in the event that a multi-instance model is required that will use dynamic
+#  routing assignment for HA at the ZeroTier VNF
 resource "zerotier_identity" "instances" {
   for_each = toset([for v in var.vpc_subnets : trimprefix(v.zone, "${var.region}-")])
 }
@@ -151,7 +145,8 @@ data "ibm_is_image" "image" {
 
 resource "ibm_is_instance" "vsi" {
   depends_on = [ibm_is_security_group_rule.additional_rules]
-  count      = var.vpc_subnet_count
+  # count      = var.vpc_subnet_count
+  count      = 1
 
   name               = "${local.name}${format("%02s", count.index)}"
   vpc                = data.ibm_is_vpc.vpc.id
@@ -181,12 +176,12 @@ resource "ibm_is_instance" "vsi" {
 data "ibm_is_volume" "instance_bd" {
   depends_on = [ ibm_is_instance.vsi ]
 
-  count = var.vpc_subnet_count
+  count = 1
   name  = "${local.name}${format("%02s", count.index)}-boot"
 }
 
 resource "ibm_resource_tag" "bd_tag" {
-  count      = var.vpc_subnet_count
+  count      = 1
   
   resource_id = data.ibm_is_volume.instance_bd[count.index].crn
   tags        = local.tags
@@ -203,13 +198,12 @@ data "cloudinit_config" "this" {
     content = templatefile("${path.module}/templates/${var.script}", {
       "zt_network"  = var.zt_network,
       "zt_identity" = zerotier_identity.instances[each.key],
-      "install_squid" = tostring(var.provision_squid)
     })
   }
 }
 
 resource "ibm_is_floating_ip" "vsi" {
-  count = var.create_public_ip ? var.vpc_subnet_count : 0
+  count = var.create_public_ip ? 1 : 0
 
   name           = "${local.name}${format("%02s", count.index)}-ip"
   target         = ibm_is_instance.vsi[count.index].primary_network_interface[0].id
@@ -228,61 +222,5 @@ resource "ibm_is_vpc_routing_table_route" "zt_ibm_is_vpc_routing_table_route" {
   name          = "${local.name}${format("%02s", count.index)}-ztgw"
   destination   = local.zt_network_cidr
   action        = "deliver"
-  next_hop      = ibm_is_instance.vsi[count.index].primary_network_interface[0].primary_ipv4_address
-}
-
-# squid_count of 1 means do not create ALB, irrespective of (bool)squid_provision
-resource "ibm_is_lb" "proxy-alb" {
-  count = local.squid_lb_count
-
-  name            = "${local.name}-alb"
-  subnets         = var.vpc_subnets[*].id
-  resource_group  = var.resource_group_id
-  type            = "private"
-  security_groups = [local.base_security_group]
-  tags            = local.tags
-}
-
-resource "ibm_is_lb_pool" "squid_pool" {
-  count = local.squid_lb_count
-
-  name                = "${local.name}-alb-pool"
-  lb                  = ibm_is_lb.proxy-alb[0].id
-  algorithm           = "round_robin"
-  protocol            = "tcp"
-  health_delay        = 60
-  health_retries      = 5
-  health_timeout      = 30
-  health_type         = "tcp"
-  health_monitor_port = 3128
-}
-
-resource "ibm_is_lb_pool_member" "squid_lb_mem" {
-  count = local.squid_lb_count == 1 ? var.vpc_subnet_count : 0
-
-  lb             = ibm_is_lb.proxy-alb[0].id
-  pool           = ibm_is_lb_pool.squid_pool[0].id
-  port           = 3128
-  target_address = ibm_is_instance.vsi[count.index].primary_network_interface[0].primary_ipv4_address
-}
-
-resource "ibm_is_lb_listener" "squid_lb_listener" {
-  count = local.squid_lb_count
-
-  lb           = ibm_is_lb.proxy-alb[0].id
-  default_pool = ibm_is_lb_pool.squid_pool[0].id
-  port         = "3128"
-  protocol     = "tcp"
-}
-
-locals {
-  squid_lb_count  = (var.provision_squid && (var.vpc_subnet_count > 1)) ? 1 : 0
-  proxy-ip     =  local.squid_lb_count == 0 ? ibm_is_instance.vsi[0].primary_network_interface[0].primary_ipv4_address : ibm_is_lb.proxy-alb[0].hostname
-  proxy-config = var.provision_squid ? templatefile("${path.module}/templates/_template_proxy-config.yaml", {
-    "proxy_ip" = local.proxy-ip 
-  }) : null
-  crio-config = var.provision_squid ? templatefile("${path.module}/templates/_template_setcrioproxy.yaml", {
-    "proxy_ip"      = local.proxy-ip,
-    "cluster_local" = var.allow_network
-  }) : null
+  next_hop      = ibm_is_instance.vsi[0].primary_network_interface[0].primary_ipv4_address
 }

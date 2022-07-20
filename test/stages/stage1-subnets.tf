@@ -4,7 +4,6 @@ module "subnets" {
   resource_group_name = module.resource_group.name
   region              = var.region
   vpc_name            = module.vpc.name
-  gateways            = module.gateways.gateways
   provision           = true
   _count              = var.vpc_subnet_count
   label               = "proxy"

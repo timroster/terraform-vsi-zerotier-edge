@@ -24,3 +24,9 @@ variable "name_prefix" {
   type        = string
   description = "Name prefix for resources"
 }
+
+variable "zt_network_cidr" {
+  type        = string
+  description = "The ZeroTier default LAN segment for nodes"
+  default     = "192.168.192.0/24"
+}

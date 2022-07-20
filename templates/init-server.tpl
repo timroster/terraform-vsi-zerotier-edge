@@ -5,19 +5,11 @@ IFS=$'\n\t'
 echo "-- net tools install --"
 dnf install -y net-tools iptables-services iptables-utils
 
-if [ "${install_squid}" = "true" ]; then
-  echo "-- squid install --"
-  dnf install -y squid
-  systemctl enable squid
-  systemctl start squid
-fi
-
 echo "-- iptables --"
 iptables -I INPUT -p udp --dport 9993 -j ACCEPT
 iptables -I INPUT -p udp --dport 53 -j ACCEPT
 iptables -I INPUT -p tcp --dport 53 -j ACCEPT
 iptables -I INPUT -p tcp --dport 22 -j ACCEPT
-iptables -I INPUT -p tcp --dport 3128 -j ACCEPT
 iptables -t nat -A POSTROUTING --dst 166.8.0.0/14 -o eth0 -j MASQUERADE
 iptables-save > /etc/sysconfig/iptables
 systemctl enable iptables

@@ -158,14 +158,14 @@ variable "zt_instances" {
   }
 }
 
+variable "zt_network_cidr" {
+  type        = string
+  description = "The ZeroTier default LAN segment for nodes"
+  default     = "192.168.192.0/24"
+}
+
 variable "allow_network" {
   type        = string
   description = "The internal ip address range that should be allowed to use the proxy server"
   default     = "10.0.0.0/8"
-}
-
-variable "provision_squid" {
-  type        = bool
-  description = "Set whether to allocate a public IP address for the virtual server instance"
-  default     = false
 }
