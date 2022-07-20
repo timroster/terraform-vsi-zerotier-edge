@@ -25,8 +25,6 @@ module does and how it does it.
 
 This module will create an IBM Cloud VSI that connects to the ZeroTier service to provide access to a VPC and resources within it. The VSI is based on Linux and will be configured with IP tables rules to allow forwarding (via nat-masquerade) to IBM Cloud control plane networks in the `166.8.0.0/14` network.
 
-The module also installs a Squid proxy to support outbound http/https access from resources within the VPC that are deployed on subnets without a public gateway.
-
 This module provides service in the style of [Network functions virtualization](https://en.wikipedia.org/wiki/Network_function_virtualization) for the VPC and requires an update to the VPC routing table to set the next hop for any traffic in the ZeroTier network to the VSI's private IP address
 
 **Note:** This module follows the Terraform conventions regarding how provider configuration is defined within the Terraform template and passed into the module - <https://www.terraform.io/docs/language/modules/develop/providers.html>. The default provider configuration flows through to the module. If different configuration is required for a module, it can be explicitly passed in the `providers` block of the module - <https://www.terraform.io/docs/language/modules/develop/providers.html#passing-providers-explicitly>.

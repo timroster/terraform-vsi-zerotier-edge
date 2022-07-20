@@ -57,3 +57,9 @@ variable "zt_network" {
     error_message = "The zt_network id must be be 16 characters long."
   }
 }
+
+variable "zt_network_cidr" {
+  type        = string
+  description = "The ZeroTier default LAN segment for nodes"
+  default     = "192.168.192.0/24"
+}
